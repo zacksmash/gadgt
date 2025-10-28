@@ -1,0 +1,95 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/*
+    These styles may be deleted when pulling in your own component library
+ */
+@layer components {
+    input:not([type='checkbox']):not([type='radio']) {
+        @apply border border-gray-300 h-10 rounded-md px-2 outline-black hover:not-focus:shadow-sm transition-shadow;
+    }
+
+    input[type='checkbox'] {
+        @apply mr-2;
+    }
+
+    button {
+        @apply inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition ease-in-out duration-150 hover:bg-gray-100 mr-2;
+    }
+
+    a[href] {
+        @apply text-blue-500 hover:text-blue-700;
+    }
+
+    hr {
+        @apply border-t border-gray-300 my-4;
+    }
+
+    form {
+        @apply px-4 pt-4;
+
+        > div {
+            @apply mb-4;
+
+            > label {
+                @apply block;
+            }
+
+            > div {
+                @apply flex items-center;
+            }
+
+            mark {
+                @apply mt-1 bg-red-200 text-red-900 border-red-300 text-xs;
+            }
+        }
+
+        label {
+            @apply text-sm font-medium text-gray-700;
+        }
+    }
+
+    header {
+        @apply pt-4 px-4 flex flex-col gap-4;
+
+        > div mark {
+            @apply bg-blue-200 text-blue-900 p-1 px-2 rounded-md border border-blue-300 text-sm;
+        }
+    }
+
+    section {
+        @apply px-4 flex flex-col gap-4;
+
+        form {
+            @apply p-0;
+        }
+    }
+
+    footer {
+        @apply pt-4 px-4;
+    }
+
+    mark {
+        @apply bg-green-200 text-green-900 p-1 px-2 rounded-md border border-green-300 text-sm;
+    }
+
+    dialog {
+        @apply fixed inset-0 z-50 p-4 bg-white border border-gray-300 rounded-md shadow-lg max-w-lg mx-auto my-20;
+
+        input {
+            @apply w-full;
+        }
+
+        button {
+            @apply mt-2 block w-full;
+        }
+    }
+}
