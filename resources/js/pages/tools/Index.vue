@@ -58,6 +58,7 @@ const selectedTool = ref(null)
 const toolResult = ref(null)
 const resourceResult = ref(null)
 const toolParams = ref({})
+
 const openAiSrc = ref(null)
 const openAiFullScreen = ref(false)
 
@@ -111,14 +112,14 @@ const runTool = async (tool, params, fromWidget) => {
 
             if (!fromWidget) {
                 if (selectedTool.value?._meta?.['openai/outputTemplate']) {
-                    fetchOpenAITemplate(selectedTool.value)
+                    openAiFetchTemplate(selectedTool.value)
                 }
             }
         },
     })
 }
 
-const fetchOpenAITemplate = (tool) => {
+const openAiFetchTemplate = (tool) => {
     router.reload({
         method: 'post',
         only: ['resource'],
@@ -150,6 +151,19 @@ const fetchOpenAITemplate = (tool) => {
             })
         },
     })
+}
+
+const openAiLeaveFullScreen = () => {
+    openAiFullScreen.value = false
+
+    resetOpenAiWidgetHeight()
+}
+
+const resetOpenAiWidgetHeight = () => {
+    if (iframeRef.value) {
+        const event = new Event('load')
+        iframeRef.value.dispatchEvent(event)
+    }
 }
 
 const openAiWindowHandler = async ({ data }) => {
@@ -197,19 +211,6 @@ const openAiWindowHandler = async ({ data }) => {
             }
 
             break
-    }
-}
-
-const leaveFullScreen = () => {
-    openAiFullScreen.value = false
-
-    resetOpenAiWidgetHeight()
-}
-
-const resetOpenAiWidgetHeight = () => {
-    if (iframeRef.value) {
-        const event = new Event('load')
-        iframeRef.value.dispatchEvent(event)
     }
 }
 
@@ -542,7 +543,7 @@ onUnmounted(() => {
                                                     size="icon"
                                                     variant="ghost"
                                                     class="absolute top-2 right-2 z-30 text-4xl"
-                                                    @click="leaveFullScreen"
+                                                    @click="openAiLeaveFullScreen"
                                                 >
                                                     &times;
                                                 </Button>
