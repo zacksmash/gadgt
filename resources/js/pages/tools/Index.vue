@@ -76,7 +76,7 @@ const mcpUiSrc = computed(() => {
     if (
         resourceContent.type === 'resource' &&
         resourceContent.resource?.uri?.includes('ui://') &&
-        resourceContent.resource?.mimeType?.includes('text/uri-list')
+        ['text/uri-list', 'text/html'].includes(resourceContent.resource?.mimeType)
     ) {
         return resourceContent.resource
     }
