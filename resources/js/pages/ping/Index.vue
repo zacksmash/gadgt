@@ -14,26 +14,31 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 const pong = ref(undefined)
+const pinging = ref(false)
 
 const ping = () => router.reload({
     method: 'post',
     only: ['pong'],
     onBefore: () => {
+        pinging.value = true
         pong.value = undefined
     },
     onSuccess: (page) => {
         pong.value = page.props.pong !== false
+    },
+    onFinish: () => {
+        pinging.value = false
     },
 })
 </script>
 
 <template>
     <div class="p-4">
-        <div class="flex items-center gap-2">
-            <Empty class="from-muted/50 to-background h-full bg-gradient-to-b from-30%">
+        <div class="mx-auto flex w-full max-w-5xl items-center gap-2">
+            <Empty class="from-muted-foreground/5 to-background h-full bg-gradient-to-b from-30%">
                 <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                        <Bell/>
+                    <EmptyMedia>
+                        <Bell class="size-25"/>
                     </EmptyMedia>
 
                     <EmptyTitle>

@@ -511,7 +511,7 @@ onUnmounted(() => {
                                     </Empty>
 
                                     <template v-else>
-                                        <div class="bg-blueprint !absolute inset-0 size-full"/>
+                                        <div class="!absolute inset-0 size-full"/>
 
                                         <div class="flex p-4">
                                             <iframe
