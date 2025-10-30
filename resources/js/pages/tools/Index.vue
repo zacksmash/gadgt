@@ -53,6 +53,12 @@ const props = defineProps({
     result: Object,
 })
 
+const toolError = computed(() => {
+    return toolResult.value?.result?.isError
+        ? toolResult.value?.result?.content
+        : null
+})
+
 const iframeRef = ref(null)
 const tools = computed(() => props.data?.result?.tools || [])
 const selectedTool = ref(null)
@@ -93,6 +99,11 @@ const runTool = async (tool, params, fromWidget) => {
         },
         onSuccess: (page) => {
             toolResult.value = page.props.result
+
+            if (toolError.value) {
+                openAiSrc.value = null
+                return
+            }
 
             // force a iframe load event
             if (iframeRef.value) {
@@ -209,6 +220,7 @@ onUnmounted(() => {
                 id="tool-list-panel"
                 :default-size="25"
             >
+                <!-- Tool List -->
                 <div class="flex flex-col gap-6 p-4">
                     <ItemGroup class="gap-4">
                         <Item
@@ -252,6 +264,7 @@ onUnmounted(() => {
                             class="h-full"
                         >
                             <ResizablePanel id="tool-description-panel" :default-size="50">
+                                <!-- Tool Details -->
                                 <div class="h-full overflow-auto">
                                     <Empty v-if="!selectedTool" class="p-4">
                                         <EmptyMedia>
@@ -279,7 +292,7 @@ onUnmounted(() => {
                                         <div class="p-4">
                                             <VueJsonPretty
                                                 :data="selectedTool"
-                                                :deep="2"
+                                                :deep="9999"
                                             />
                                         </div>
                                     </div>
@@ -288,8 +301,9 @@ onUnmounted(() => {
 
                             <ResizableHandle id="tool-description-handle" with-handle/>
 
+                            <!-- Tool Input Params -->
                             <ResizablePanel id="tool-input-panel" :default-size="50">
-                                <div class="h-full overflow-auto">
+                                <form class="h-full overflow-auto" @submit.prevent="runTool(selectedTool.name, toolParams)">
                                     <Empty v-if="!selectedTool" class="p-4">
                                         <EmptyMedia>
                                             <DetailsIcon class="text-ring size-24"/>
@@ -315,7 +329,7 @@ onUnmounted(() => {
                                             <Button
                                                 size="sm"
                                                 :disabled="!selectedTool"
-                                                @click="runTool(selectedTool.name, toolParams)"
+                                                type="submit"
                                             >
                                                 Execute
                                             </Button>
@@ -439,7 +453,7 @@ onUnmounted(() => {
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                </form>
                             </ResizablePanel>
                         </ResizablePanelGroup>
                     </ResizablePanel>
@@ -473,14 +487,19 @@ onUnmounted(() => {
                                     </Empty>
 
                                     <div v-else class="relative isolate divide-y">
-                                        <div class="bg-accent sticky top-0 left-0 z-10 flex h-14 w-full items-center px-4">
+                                        <div
+                                            :class="[
+                                                toolError ? 'bg-red-500 dark:bg-red-800' : 'bg-accent',
+                                                'sticky top-0 left-0 z-10 flex h-14 w-full items-center px-4'
+                                            ]"
+                                        >
                                             <span class="leading-none font-semibold tracking-tight">Tool Output</span>
                                         </div>
 
                                         <div class="relative p-4">
                                             <VueJsonPretty
                                                 :data="toolResult"
-                                                :deep="3"
+                                                :deep="99999"
                                             />
                                         </div>
                                     </div>
@@ -492,7 +511,7 @@ onUnmounted(() => {
                             <ResizablePanel id="tool-ui-panel" :default-size="50">
                                 <!-- Tool UI -->
                                 <div class="relative h-full overflow-auto">
-                                    <Empty v-if="!openAiSrc" class="p-4">
+                                    <Empty v-if="(!openAiSrc && !toolError)" class="p-4">
                                         <EmptyMedia>
                                             <UiIcon class="text-ring size-24"/>
                                         </EmptyMedia>
@@ -519,7 +538,7 @@ onUnmounted(() => {
                                                 :src="openAiSrc"
                                                 :class="[
                                                     'relative mx-auto h-auto max-h-[600px] w-full max-w-4xl rounded-md border-2',
-                                                    resourceResult.result.contents[0]._meta?.['openai/widgetPrefersBorder'] ? 'border-border shadow-lg' : 'border-transparent',
+                                                    resourceResult?.result.contents[0]._meta?.['openai/widgetPrefersBorder'] ? 'border-border shadow-lg' : 'border-transparent',
                                                 ]"
                                                 sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
                                                 :title="`OpenAI Component: ${selectedTool.name}`"
