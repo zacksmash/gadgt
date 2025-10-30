@@ -57,8 +57,9 @@ const iframeRef = ref(null)
 const selectedTool = ref(null)
 const toolResult = ref(null)
 const resourceResult = ref(null)
-const openAiSrc = ref(null)
 const toolParams = ref({})
+const openAiSrc = ref(null)
+const openAiFullScreen = ref(false)
 
 const toolError = computed(() => {
     return toolResult.value?.result?.isError
@@ -98,11 +99,7 @@ const runTool = async (tool, params, fromWidget) => {
             params: params,
         },
         onStart: () => {
-            // force a iframe load event
-            if (iframeRef.value) {
-                const event = new Event('load')
-                iframeRef.value.dispatchEvent(event)
-            }
+            resetOpenAiWidgetHeight()
         },
         onSuccess: (page) => {
             toolResult.value = page.props.result
@@ -177,10 +174,7 @@ const openAiWindowHandler = async ({ data }) => {
                         )
 
                         setTimeout(() => {
-                            if (iframeRef.value) {
-                                const event = new Event('load')
-                                iframeRef.value.dispatchEvent(event)
-                            }
+                            resetOpenAiWidgetHeight()
                         }, 10)
                     }, 500)
                 } catch (err) {
@@ -195,6 +189,27 @@ const openAiWindowHandler = async ({ data }) => {
                 }
             }
             break
+
+        case 'openai:requestDisplayMode':
+            openAiFullScreen.value = data.mode === 'fullscreen'
+            if (openAiFullScreen.value && iframeRef.value) {
+                iframeRef.value.style.height = null
+            }
+
+            break
+    }
+}
+
+const leaveFullScreen = () => {
+    openAiFullScreen.value = false
+
+    resetOpenAiWidgetHeight()
+}
+
+const resetOpenAiWidgetHeight = () => {
+    if (iframeRef.value) {
+        const event = new Event('load')
+        iframeRef.value.dispatchEvent(event)
     }
 }
 
@@ -211,336 +226,349 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <Deferred data="data">
-        <template #fallback>
-            Loading Tools...
-        </template>
+    <div class="relative h-full">
+        <Deferred data="data">
+            <template #fallback>
+                Loading Tools...
+            </template>
 
-        <ResizablePanelGroup id="tools-group" direction="horizontal">
-            <!-- Tool List -->
-            <ResizablePanel id="tools-panel" :default-size="25">
-                <div class="flex flex-col gap-6 p-4">
-                    <ItemGroup class="gap-4">
-                        <Item
-                            v-for="tool in tools"
-                            :key="tool.name"
-                            variant="outline"
-                        >
-                            <ItemContent>
-                                <ItemTitle>{{ tool.name }}</ItemTitle>
+            <ResizablePanelGroup id="tools-group" direction="horizontal">
+                <!-- Tool List -->
+                <ResizablePanel id="tools-panel" :default-size="25">
+                    <div class="flex flex-col gap-6 p-4">
+                        <ItemGroup class="gap-4">
+                            <Item
+                                v-for="tool in tools"
+                                :key="tool.name"
+                                variant="outline"
+                            >
+                                <ItemContent>
+                                    <ItemTitle>{{ tool.name }}</ItemTitle>
 
-                                <ItemDescription>
-                                    {{ tool.description }}
-                                </ItemDescription>
-                            </ItemContent>
+                                    <ItemDescription>
+                                        {{ tool.description }}
+                                    </ItemDescription>
+                                </ItemContent>
 
-                            <ItemActions>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    @click="selectTool(tool)"
-                                >
-                                    Select Tool
-                                </Button>
-                            </ItemActions>
-                        </Item>
-                    </ItemGroup>
-                </div>
-            </ResizablePanel>
+                                <ItemActions>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        @click="selectTool(tool)"
+                                    >
+                                        Select Tool
+                                    </Button>
+                                </ItemActions>
+                            </Item>
+                        </ItemGroup>
+                    </div>
+                </ResizablePanel>
 
-            <ResizableHandle id="tools-group-handle" with-handle/>
+                <ResizableHandle id="tools-group-handle" with-handle/>
+                <!-- Tool Details & Execution -->
+                <ResizablePanel id="tool-panel" :default-size="75">
+                    <ResizablePanelGroup id="tool-group" direction="vertical">
+                        <ResizablePanel id="tool-info-panel" :default-size="50">
+                            <ResizablePanelGroup id="tool-info-group" direction="horizontal">
+                                <!-- Tool Details -->
+                                <ResizablePanel id="tool-details-panel" :default-size="50">
+                                    <div class="h-full overflow-auto">
+                                        <Empty v-if="!selectedTool" class="p-4">
+                                            <EmptyMedia>
+                                                <InputIcon class="text-ring size-24"/>
+                                            </EmptyMedia>
 
-            <!-- Tool Details & Execution -->
-            <ResizablePanel id="tool-panel" :default-size="75">
-                <ResizablePanelGroup id="tool-group" direction="vertical">
-                    <ResizablePanel id="tool-info-panel" :default-size="50">
-                        <ResizablePanelGroup id="tool-info-group" direction="horizontal">
-                            <!-- Tool Details -->
-                            <ResizablePanel id="tool-details-panel" :default-size="50">
-                                <div class="h-full overflow-auto">
-                                    <Empty v-if="!selectedTool" class="p-4">
-                                        <EmptyMedia>
-                                            <InputIcon class="text-ring size-24"/>
-                                        </EmptyMedia>
+                                            <EmptyContent>
+                                                <EmptyHeader>
+                                                    <EmptyTitle>
+                                                        No Tool Selected
+                                                    </EmptyTitle>
+                                                </EmptyHeader>
 
-                                        <EmptyContent>
-                                            <EmptyHeader>
-                                                <EmptyTitle>
-                                                    No Tool Selected
-                                                </EmptyTitle>
-                                            </EmptyHeader>
+                                                <EmptyDescription>
+                                                    Select a tool to see its details here.
+                                                </EmptyDescription>
+                                            </EmptyContent>
+                                        </Empty>
 
-                                            <EmptyDescription>
-                                                Select a tool to see its details here.
-                                            </EmptyDescription>
-                                        </EmptyContent>
-                                    </Empty>
+                                        <div v-else class="relative isolate divide-y">
+                                            <div class="bg-accent sticky top-0 left-0 z-10 flex h-14 w-full items-center px-4">
+                                                <span class="leading-none font-semibold tracking-tight">Tool Details</span>
+                                            </div>
 
-                                    <div v-else class="relative isolate divide-y">
-                                        <div class="bg-accent sticky top-0 left-0 z-10 flex h-14 w-full items-center px-4">
-                                            <span class="leading-none font-semibold tracking-tight">Tool Details</span>
-                                        </div>
-
-                                        <div class="p-4">
-                                            <VueJsonPretty
-                                                :data="selectedTool"
-                                                :deep="9999"
-                                            />
+                                            <div class="p-4">
+                                                <VueJsonPretty
+                                                    :data="selectedTool"
+                                                    :deep="9999"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </ResizablePanel>
+                                </ResizablePanel>
 
-                            <ResizableHandle id="tool-info-handle" with-handle/>
+                                <ResizableHandle id="tool-info-handle" with-handle/>
+                                <!-- Tool Input -->
+                                <ResizablePanel id="tool-input-panel" :default-size="50">
+                                    <form class="h-full overflow-auto" @submit.prevent="runTool(selectedTool.name, toolParams)">
+                                        <Empty v-if="!selectedTool" class="p-4">
+                                            <EmptyMedia>
+                                                <DetailsIcon class="text-ring size-24"/>
+                                            </EmptyMedia>
 
-                            <!-- Tool Input -->
-                            <ResizablePanel id="tool-input-panel" :default-size="50">
-                                <form class="h-full overflow-auto" @submit.prevent="runTool(selectedTool.name, toolParams)">
-                                    <Empty v-if="!selectedTool" class="p-4">
-                                        <EmptyMedia>
-                                            <DetailsIcon class="text-ring size-24"/>
-                                        </EmptyMedia>
+                                            <EmptyContent>
+                                                <EmptyHeader>
+                                                    <EmptyTitle>
+                                                        No Tool Selected
+                                                    </EmptyTitle>
+                                                </EmptyHeader>
 
-                                        <EmptyContent>
-                                            <EmptyHeader>
-                                                <EmptyTitle>
-                                                    No Tool Selected
-                                                </EmptyTitle>
-                                            </EmptyHeader>
+                                                <EmptyDescription>
+                                                    When a tool is selected, its input parameters will be displayed here.
+                                                </EmptyDescription>
+                                            </EmptyContent>
+                                        </Empty>
 
-                                            <EmptyDescription>
-                                                When a tool is selected, its input parameters will be displayed here.
-                                            </EmptyDescription>
-                                        </EmptyContent>
-                                    </Empty>
+                                        <div v-else class="relative isolate divide-y">
+                                            <div class="bg-accent sticky top-0 left-0 z-10 flex h-14 w-full items-center justify-between gap-4 px-4">
+                                                <span class="leading-none font-semibold tracking-tight">Tool Input</span>
 
-                                    <div v-else class="relative isolate divide-y">
-                                        <div class="bg-accent sticky top-0 left-0 z-10 flex h-14 w-full items-center justify-between gap-4 px-4">
-                                            <span class="leading-none font-semibold tracking-tight">Tool Input</span>
+                                                <Button
+                                                    size="sm"
+                                                    :disabled="!selectedTool"
+                                                    type="submit"
+                                                >
+                                                    Execute
+                                                </Button>
+                                            </div>
 
-                                            <Button
-                                                size="sm"
-                                                :disabled="!selectedTool"
-                                                type="submit"
-                                            >
-                                                Execute
-                                            </Button>
-                                        </div>
-
-                                        <div class="p-4">
-                                            <div
-                                                v-for="input in inputSchema"
-                                                :key="input.name"
-                                                class="py-4"
-                                            >
-                                                <FormField :name="input.name">
-                                                    <FormItem>
-                                                        <FormLabel :for="input.name">
-                                                            <div class="flex w-full items-center justify-between gap-2">
-                                                                <span class="flex items-center gap-1">
-                                                                    {{ input.name }}
-                                                                    <span v-if="isRequired(input)" class="text-4xl text-red-500">
-                                                                        <Asterisk class="size-3" title="Required"/>
+                                            <div class="p-4">
+                                                <div
+                                                    v-for="input in inputSchema"
+                                                    :key="input.name"
+                                                    class="py-4"
+                                                >
+                                                    <FormField :name="input.name">
+                                                        <FormItem>
+                                                            <FormLabel :for="input.name">
+                                                                <div class="flex w-full items-center justify-between gap-2">
+                                                                    <span class="flex items-center gap-1">
+                                                                        {{ input.name }}
+                                                                        <span v-if="isRequired(input)" class="text-4xl text-red-500">
+                                                                            <Asterisk class="size-3" title="Required"/>
+                                                                        </span>
                                                                     </span>
-                                                                </span>
 
-                                                                <Badge variant="outline">{{ input.type }}</Badge>
-                                                            </div>
-                                                        </FormLabel>
+                                                                    <Badge variant="outline">{{ input.type }}</Badge>
+                                                                </div>
+                                                            </FormLabel>
 
-                                                        <FormControl>
-                                                            <template v-if="input.type === 'array' || input.type === 'enum'">
-                                                                <Select v-if="input?.items?.enum" v-model="toolParams[input.name]">
-                                                                    <SelectTrigger class="w-full">
-                                                                        <SelectValue placeholder="Choose an option"/>
-                                                                    </SelectTrigger>
+                                                            <FormControl>
+                                                                <template v-if="input.type === 'array' || input.type === 'enum'">
+                                                                    <Select v-if="input?.items?.enum" v-model="toolParams[input.name]">
+                                                                        <SelectTrigger class="w-full">
+                                                                            <SelectValue placeholder="Choose an option"/>
+                                                                        </SelectTrigger>
 
-                                                                    <SelectContent>
-                                                                        <SelectGroup>
-                                                                            <SelectLabel>Options</SelectLabel>
+                                                                        <SelectContent>
+                                                                            <SelectGroup>
+                                                                                <SelectLabel>Options</SelectLabel>
 
-                                                                            <SelectItem
-                                                                                v-for="option in input.items.enum"
-                                                                                :key="option"
-                                                                                :value="option"
-                                                                            >
-                                                                                {{ option }}
-                                                                            </SelectItem>
-                                                                        </SelectGroup>
-                                                                    </SelectContent>
-                                                                </Select>
+                                                                                <SelectItem
+                                                                                    v-for="option in input.items.enum"
+                                                                                    :key="option"
+                                                                                    :value="option"
+                                                                                >
+                                                                                    {{ option }}
+                                                                                </SelectItem>
+                                                                            </SelectGroup>
+                                                                        </SelectContent>
+                                                                    </Select>
 
-                                                                <template v-else>
+                                                                    <template v-else>
+                                                                        <code class="bg-muted ring-ring rounded-sm p-2 text-xs ring">
+                                                                            <p>Options:</p>
+
+                                                                            <br>
+                                                                            {{ JSON.stringify(input.default) }}
+                                                                        </code>
+
+                                                                        <Textarea
+                                                                            :id="input.name"
+                                                                            v-model="toolParams[input.name]"
+                                                                            rows="4"
+                                                                            placeholder="Enter a JSON array"
+                                                                            @vue:mounted="toolParams[input.name] = `[  ]`"
+                                                                        />
+                                                                    </template>
+                                                                </template>
+
+                                                                <template v-else-if="input.type === 'boolean'">
+                                                                    <div class="flex items-center gap-2">
+                                                                        <Switch
+                                                                            :id="input.name"
+                                                                            v-model="toolParams[input.name]"
+                                                                        />
+
+                                                                        <Badge
+                                                                            variant="outline"
+                                                                            :class="[
+                                                                                toolParams[input.name] ? 'ring-ring ring' : ''
+                                                                            ]"
+                                                                        >
+                                                                            {{ toolParams[input.name] ? 'Enabled' : 'Disabled' }}
+                                                                        </Badge>
+                                                                    </div>
+                                                                </template>
+
+                                                                <template v-else-if="input.type === 'object'">
                                                                     <code class="bg-muted ring-ring rounded-sm p-2 text-xs ring">
                                                                         <p>Options:</p>
 
                                                                         <br>
-                                                                        {{ JSON.stringify(input.default) }}
+                                                                        {{
+                                                                            JSON.stringify(Object.fromEntries(
+                                                                                Object.entries(input.properties).map(([key, value]) => [key, value.default || null])
+                                                                            ))
+                                                                        }}
                                                                     </code>
 
                                                                     <Textarea
                                                                         :id="input.name"
                                                                         v-model="toolParams[input.name]"
                                                                         rows="4"
-                                                                        placeholder="Enter a JSON array"
-                                                                        @vue:mounted="toolParams[input.name] = `[  ]`"
+                                                                        @vue:mounted="toolParams[input.name] = `{  }`"
                                                                     />
                                                                 </template>
-                                                            </template>
 
-                                                            <template v-else-if="input.type === 'boolean'">
-                                                                <div class="flex items-center gap-2">
-                                                                    <Switch
+                                                                <template v-else>
+                                                                    <Input
                                                                         :id="input.name"
                                                                         v-model="toolParams[input.name]"
+                                                                        :type="input.type === 'number' || input.type === 'integer' ? 'number' : 'text'"
                                                                     />
+                                                                </template>
+                                                            </FormControl>
 
-                                                                    <Badge
-                                                                        variant="outline"
-                                                                        :class="[
-                                                                            toolParams[input.name] ? 'ring-ring ring' : ''
-                                                                        ]"
-                                                                    >
-                                                                        {{ toolParams[input.name] ? 'Enabled' : 'Disabled' }}
-                                                                    </Badge>
-                                                                </div>
-                                                            </template>
+                                                            <FormDescription>
+                                                                {{ input.description }}
+                                                            </FormDescription>
 
-                                                            <template v-else-if="input.type === 'object'">
-                                                                <code class="bg-muted ring-ring rounded-sm p-2 text-xs ring">
-                                                                    <p>Options:</p>
+                                                            <FormMessage/>
+                                                        </FormItem>
+                                                    </FormField>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </ResizablePanel>
+                            </ResizablePanelGroup>
+                        </ResizablePanel>
 
-                                                                    <br>
-                                                                    {{
-                                                                        JSON.stringify(Object.fromEntries(
-                                                                            Object.entries(input.properties).map(([key, value]) => [key, value.default || null])
-                                                                        ))
-                                                                    }}
-                                                                </code>
+                        <ResizableHandle id="tool-group-handle" with-handle/>
 
-                                                                <Textarea
-                                                                    :id="input.name"
-                                                                    v-model="toolParams[input.name]"
-                                                                    rows="4"
-                                                                    @vue:mounted="toolParams[input.name] = `{  }`"
-                                                                />
-                                                            </template>
+                        <ResizablePanel id="tool-results-panel" :default-size="50">
+                            <ResizablePanelGroup id="tool-results-group" direction="horizontal">
+                                <!-- Tool Output -->
+                                <ResizablePanel id="tool-output-panel" :default-size="50">
+                                    <div class="h-full overflow-auto">
+                                        <Empty v-if="!toolResult" class="p-4">
+                                            <EmptyMedia>
+                                                <OutputIcon class="text-ring size-24"/>
+                                            </EmptyMedia>
 
-                                                            <template v-else>
-                                                                <Input
-                                                                    :id="input.name"
-                                                                    v-model="toolParams[input.name]"
-                                                                    :type="input.type === 'number' || input.type === 'integer' ? 'number' : 'text'"
-                                                                />
-                                                            </template>
-                                                        </FormControl>
+                                            <EmptyContent>
+                                                <EmptyHeader>
+                                                    <EmptyTitle>
+                                                        No Tool Output
+                                                    </EmptyTitle>
+                                                </EmptyHeader>
 
-                                                        <FormDescription>
-                                                            {{ input.description }}
-                                                        </FormDescription>
+                                                <EmptyDescription>
+                                                    Execute the selected tool to see its output here.
+                                                </EmptyDescription>
+                                            </EmptyContent>
+                                        </Empty>
 
-                                                        <FormMessage/>
-                                                    </FormItem>
-                                                </FormField>
+                                        <div v-else class="relative isolate divide-y">
+                                            <div
+                                                :class="[
+                                                    toolError ? 'bg-red-500 dark:bg-red-800' : 'bg-accent',
+                                                    'sticky top-0 left-0 z-10 flex h-14 w-full items-center px-4'
+                                                ]"
+                                            >
+                                                <span class="leading-none font-semibold tracking-tight">Tool Output</span>
+                                            </div>
+
+                                            <div class="relative p-4">
+                                                <VueJsonPretty
+                                                    :data="toolResult"
+                                                    :deep="99999"
+                                                />
                                             </div>
                                         </div>
                                     </div>
-                                </form>
-                            </ResizablePanel>
-                        </ResizablePanelGroup>
-                    </ResizablePanel>
+                                </ResizablePanel>
 
-                    <ResizableHandle id="tool-group-handle" with-handle/>
+                                <ResizableHandle id="tool-results-handle" with-handle/>
+                                <!-- Tool UI -->
+                                <ResizablePanel id="tool-ui-panel" :default-size="50">
+                                    <div class="h-full overflow-auto">
+                                        <Empty v-if="(!openAiSrc)" class="p-4">
+                                            <EmptyMedia>
+                                                <UiIcon class="text-ring size-24"/>
+                                            </EmptyMedia>
 
-                    <ResizablePanel id="tool-results-panel" :default-size="50">
-                        <ResizablePanelGroup id="tool-results-group" direction="horizontal">
-                            <!-- Tool Output -->
-                            <ResizablePanel id="tool-output-panel" :default-size="50">
-                                <div class="h-full overflow-auto">
-                                    <Empty v-if="!toolResult" class="p-4">
-                                        <EmptyMedia>
-                                            <OutputIcon class="text-ring size-24"/>
-                                        </EmptyMedia>
+                                            <EmptyContent>
+                                                <EmptyHeader>
+                                                    <EmptyTitle>
+                                                        No Tool UI
+                                                    </EmptyTitle>
+                                                </EmptyHeader>
 
-                                        <EmptyContent>
-                                            <EmptyHeader>
-                                                <EmptyTitle>
-                                                    No Tool Output
-                                                </EmptyTitle>
-                                            </EmptyHeader>
+                                                <EmptyDescription>
+                                                    If a UI component is available for this tool, it will be displayed here.
+                                                </EmptyDescription>
+                                            </EmptyContent>
+                                        </Empty>
 
-                                            <EmptyDescription>
-                                                Execute the selected tool to see its output here.
-                                            </EmptyDescription>
-                                        </EmptyContent>
-                                    </Empty>
-
-                                    <div v-else class="relative isolate divide-y">
-                                        <div
-                                            :class="[
-                                                toolError ? 'bg-red-500 dark:bg-red-800' : 'bg-accent',
-                                                'sticky top-0 left-0 z-10 flex h-14 w-full items-center px-4'
-                                            ]"
-                                        >
-                                            <span class="leading-none font-semibold tracking-tight">Tool Output</span>
-                                        </div>
-
-                                        <div class="relative p-4">
-                                            <VueJsonPretty
-                                                :data="toolResult"
-                                                :deep="99999"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </ResizablePanel>
-
-                            <ResizableHandle id="tool-results-handle" with-handle/>
-
-                            <!-- Tool UI -->
-                            <ResizablePanel id="tool-ui-panel" :default-size="50">
-                                <div class="relative h-full overflow-auto">
-                                    <Empty v-if="(!openAiSrc && !toolError)" class="p-4">
-                                        <EmptyMedia>
-                                            <UiIcon class="text-ring size-24"/>
-                                        </EmptyMedia>
-
-                                        <EmptyContent>
-                                            <EmptyHeader>
-                                                <EmptyTitle>
-                                                    No Tool UI
-                                                </EmptyTitle>
-                                            </EmptyHeader>
-
-                                            <EmptyDescription>
-                                                If a UI component is available for this tool, it will be displayed here.
-                                            </EmptyDescription>
-                                        </EmptyContent>
-                                    </Empty>
-
-                                    <template v-else>
-                                        <div class="!absolute inset-0 size-full"/>
-
-                                        <div class="flex p-4">
-                                            <iframe
-                                                ref="iframeRef"
-                                                :src="openAiSrc"
+                                        <template v-else>
+                                            <div
                                                 :class="[
-                                                    'relative mx-auto max-h-[600px] w-full max-w-4xl rounded-md border-2',
-                                                    resourceResult?.result.contents[0]._meta?.['openai/widgetPrefersBorder'] ? 'border-border shadow-lg' : 'border-transparent',
+                                                    openAiFullScreen ? 'absolute inset-0 isolate z-20 bg-white' : 'p-4',
                                                 ]"
-                                                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
-                                                :title="`OpenAI Component: ${selectedTool.name}`"
-                                                allow="web-share"
-                                            ></iframe>
-                                        </div>
-                                    </template>
-                                </div>
-                            </ResizablePanel>
-                        </ResizablePanelGroup>
-                    </ResizablePanel>
-                </ResizablePanelGroup>
-            </ResizablePanel>
-        </ResizablePanelGroup>
-    </Deferred>
+                                            >
+                                                <Button
+                                                    v-if="openAiFullScreen"
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    class="absolute top-2 right-2 z-30 text-4xl"
+                                                    @click="leaveFullScreen"
+                                                >
+                                                    &times;
+                                                </Button>
+
+                                                <iframe
+                                                    ref="iframeRef"
+                                                    :src="openAiSrc"
+                                                    :class="[
+                                                        'w-full',
+                                                        !openAiFullScreen ? 'mx-auto max-h-[600px] max-w-4xl border-2' : 'h-full',
+                                                        resourceResult?.result.contents[0]._meta?.['openai/widgetPrefersBorder'] && !openAiFullScreen
+                                                            ? 'border-border rounded-md shadow-lg' : 'border-transparent',
+                                                    ]"
+                                                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
+                                                    :title="`OpenAI Component: ${selectedTool.name}`"
+                                                    allow="web-share"
+                                                ></iframe>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </ResizablePanel>
+                            </ResizablePanelGroup>
+                        </ResizablePanel>
+                    </ResizablePanelGroup>
+                </ResizablePanel>
+            </ResizablePanelGroup>
+        </Deferred>
+    </div>
 </template>
