@@ -53,18 +53,20 @@ const props = defineProps({
     result: Object,
 })
 
+const iframeRef = ref(null)
+const selectedTool = ref(null)
+const toolResult = ref(null)
+const resourceResult = ref(null)
+const openAiSrc = ref(null)
+const toolParams = ref({})
+
 const toolError = computed(() => {
     return toolResult.value?.result?.isError
         ? toolResult.value?.result?.content
         : null
 })
-
-const iframeRef = ref(null)
 const tools = computed(() => props.data?.result?.tools || [])
-const selectedTool = ref(null)
-const toolResult = ref(null)
-const resourceResult = ref(null)
-const openAiSrc = ref(null)
+
 const inputSchema = computed(() => {
     return selectedTool.value?.inputSchema?.properties
         ? Object.keys(selectedTool.value.inputSchema.properties).map((key) => ({
@@ -73,8 +75,6 @@ const inputSchema = computed(() => {
         }))
         : null
 })
-
-const toolParams = ref({})
 
 const isRequired = (input) => {
     return selectedTool.value?.inputSchema?.required?.includes(input.name)
@@ -97,18 +97,19 @@ const runTool = async (tool, params, fromWidget) => {
             name: tool,
             params: params,
         },
+        onStart: () => {
+            // force a iframe load event
+            if (iframeRef.value) {
+                const event = new Event('load')
+                iframeRef.value.dispatchEvent(event)
+            }
+        },
         onSuccess: (page) => {
             toolResult.value = page.props.result
 
             if (toolError.value) {
                 openAiSrc.value = null
                 return
-            }
-
-            // force a iframe load event
-            if (iframeRef.value) {
-                const event = new Event('load')
-                iframeRef.value.dispatchEvent(event)
             }
 
             if (!fromWidget) {
@@ -215,12 +216,9 @@ onUnmounted(() => {
             Loading Tools...
         </template>
 
-        <ResizablePanelGroup id="tool-group" direction="horizontal">
-            <ResizablePanel
-                id="tool-list-panel"
-                :default-size="25"
-            >
-                <!-- Tool List -->
+        <ResizablePanelGroup id="tools-group" direction="horizontal">
+            <!-- Tool List -->
+            <ResizablePanel id="tools-panel" :default-size="25">
                 <div class="flex flex-col gap-6 p-4">
                     <ItemGroup class="gap-4">
                         <Item
@@ -250,21 +248,15 @@ onUnmounted(() => {
                 </div>
             </ResizablePanel>
 
-            <ResizableHandle id="tool-group-handle" with-handle/>
+            <ResizableHandle id="tools-group-handle" with-handle/>
 
-            <ResizablePanel id="tool-details-panel" :default-size="75">
-                <ResizablePanelGroup id="tool-info-group" direction="vertical">
-                    <ResizablePanel
-                        id="tool-info-panel"
-                        :default-size="50"
-                    >
-                        <ResizablePanelGroup
-                            id="tool-details-group"
-                            direction="horizontal"
-                            class="h-full"
-                        >
-                            <ResizablePanel id="tool-description-panel" :default-size="50">
-                                <!-- Tool Details -->
+            <!-- Tool Details & Execution -->
+            <ResizablePanel id="tool-panel" :default-size="75">
+                <ResizablePanelGroup id="tool-group" direction="vertical">
+                    <ResizablePanel id="tool-info-panel" :default-size="50">
+                        <ResizablePanelGroup id="tool-info-group" direction="horizontal">
+                            <!-- Tool Details -->
+                            <ResizablePanel id="tool-details-panel" :default-size="50">
                                 <div class="h-full overflow-auto">
                                     <Empty v-if="!selectedTool" class="p-4">
                                         <EmptyMedia>
@@ -299,9 +291,9 @@ onUnmounted(() => {
                                 </div>
                             </ResizablePanel>
 
-                            <ResizableHandle id="tool-description-handle" with-handle/>
+                            <ResizableHandle id="tool-info-handle" with-handle/>
 
-                            <!-- Tool Input Params -->
+                            <!-- Tool Input -->
                             <ResizablePanel id="tool-input-panel" :default-size="50">
                                 <form class="h-full overflow-auto" @submit.prevent="runTool(selectedTool.name, toolParams)">
                                     <Empty v-if="!selectedTool" class="p-4">
@@ -458,15 +450,12 @@ onUnmounted(() => {
                         </ResizablePanelGroup>
                     </ResizablePanel>
 
-                    <ResizableHandle id="tool-response-handle" with-handle/>
+                    <ResizableHandle id="tool-group-handle" with-handle/>
 
-                    <ResizablePanel
-                        id="tool-output-panel"
-                        :default-size="50"
-                    >
-                        <ResizablePanelGroup id="tool-response-group" direction="horizontal">
-                            <ResizablePanel id="tool-response-panel" :default-size="50">
-                                <!-- Tool Output -->
+                    <ResizablePanel id="tool-results-panel" :default-size="50">
+                        <ResizablePanelGroup id="tool-results-group" direction="horizontal">
+                            <!-- Tool Output -->
+                            <ResizablePanel id="tool-output-panel" :default-size="50">
                                 <div class="h-full overflow-auto">
                                     <Empty v-if="!toolResult" class="p-4">
                                         <EmptyMedia>
@@ -506,10 +495,10 @@ onUnmounted(() => {
                                 </div>
                             </ResizablePanel>
 
-                            <ResizableHandle id="tool-response-handle" with-handle/>
+                            <ResizableHandle id="tool-results-handle" with-handle/>
 
+                            <!-- Tool UI -->
                             <ResizablePanel id="tool-ui-panel" :default-size="50">
-                                <!-- Tool UI -->
                                 <div class="relative h-full overflow-auto">
                                     <Empty v-if="(!openAiSrc && !toolError)" class="p-4">
                                         <EmptyMedia>
@@ -537,7 +526,7 @@ onUnmounted(() => {
                                                 ref="iframeRef"
                                                 :src="openAiSrc"
                                                 :class="[
-                                                    'relative mx-auto h-auto max-h-[600px] w-full max-w-4xl rounded-md border-2',
+                                                    'relative mx-auto max-h-[600px] w-full max-w-4xl rounded-md border-2',
                                                     resourceResult?.result.contents[0]._meta?.['openai/widgetPrefersBorder'] ? 'border-border shadow-lg' : 'border-transparent',
                                                 ]"
                                                 sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
