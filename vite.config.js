@@ -20,6 +20,10 @@ export default defineConfig({
                     base: null,
                     includeAbsolute: false,
                 },
+                compilerOptions: {
+                    // list your custom HTML elements here
+                    isCustomElement: (tag) => ['ui-resource-renderer'].includes(tag),
+                },
             },
         }),
         wayfinder({

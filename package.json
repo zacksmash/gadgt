@@ -28,6 +28,7 @@
     },
     "dependencies": {
         "@inertiajs/vue3": "^2.1.2",
+        "@mcp-ui/client": "^5.14.1",
         "@tanstack/vue-table": "^8.21.3",
         "@unovis/ts": "^1.6.1",
         "@unovis/vue": "^1.6.1",

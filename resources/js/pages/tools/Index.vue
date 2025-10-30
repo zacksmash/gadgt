@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { Deferred, router } from '@inertiajs/vue3'
+import '@mcp-ui/client/ui-resource-renderer.wc.js'
 import VueJsonPretty from 'vue-json-pretty'
 import 'vue-json-pretty/lib/styles.css'
 import { Asterisk, ListCheck as DetailsIcon, Hammer as InputIcon, ServerCog as OutputIcon, Component as UiIcon } from 'lucide-vue-next'
@@ -53,14 +54,60 @@ const props = defineProps({
     result: Object,
 })
 
-const iframeRef = ref(null)
 const selectedTool = ref(null)
 const toolResult = ref(null)
 const resourceResult = ref(null)
 const toolParams = ref({})
 
+const openAiFrame = ref(null)
 const openAiSrc = ref(null)
 const openAiFullScreen = ref(false)
+
+const mcpUiFrame = ref(null)
+const mcpUiSrc = computed(() => {
+    const resourceContent = toolResult.value?.result?.content?.find(
+        (content) => content.type === 'resource' && content.resource,
+    )
+
+    if (!resourceContent) {
+        return false
+    }
+
+    if (
+        resourceContent.type === 'resource' &&
+        resourceContent.resource?.uri?.includes('ui://') &&
+        resourceContent.resource?.mimeType?.includes('text/uri-list')
+    ) {
+        return resourceContent.resource
+    }
+
+    return false
+})
+const mcpUiActionHandler = ({ detail: result }) => {
+    switch (result.type) {
+        case 'tool':
+            console.log('Tool call:', result.payload.toolName, result.payload.params)
+            // Handle tool execution
+            break
+        case 'prompt':
+            console.log('Prompt:', result.payload.prompt)
+            // Handle prompt display
+            break
+        case 'link':
+            console.log('Link:', result.payload.url)
+            // Handle link navigation
+            break
+        case 'intent':
+            console.log('Intent:', result.payload.intent, result.payload.params)
+            // Handle intent processing
+            break
+        case 'notify':
+            console.log('Notification:', result.payload.message)
+            // Handle notification display
+            break
+    }
+    return { status: 'handled' }
+}
 
 const toolError = computed(() => {
     return toolResult.value?.result?.isError
@@ -137,9 +184,9 @@ const openAiFetchTemplate = (tool) => {
             openAiSrc.value = page.props.resource.template
 
             nextTick(() => {
-                if (iframeRef.value) {
+                if (openAiFrame.value) {
                     // set the iframe height based on the content
-                    const iframe = iframeRef.value
+                    const iframe = openAiFrame.value
 
                     const resize = () => {
                         iframe.style.height = iframe.contentWindow.document.body.scrollHeight + 4 + 'px'
@@ -160,9 +207,9 @@ const openAiLeaveFullScreen = () => {
 }
 
 const resetOpenAiWidgetHeight = () => {
-    if (iframeRef.value) {
+    if (openAiFrame.value) {
         const event = new Event('load')
-        iframeRef.value.dispatchEvent(event)
+        openAiFrame.value.dispatchEvent(event)
     }
 }
 
@@ -178,7 +225,7 @@ const openAiWindowHandler = async ({ data }) => {
                     )
 
                     setTimeout(() => {
-                        iframeRef.value?.contentWindow?.postMessage(
+                        openAiFrame.value?.contentWindow?.postMessage(
                             {
                                 type: 'openai:callTool:response',
                                 requestId: data.requestId,
@@ -192,7 +239,7 @@ const openAiWindowHandler = async ({ data }) => {
                         }, 10)
                     }, 500)
                 } catch (err) {
-                    iframeRef.value?.contentWindow?.postMessage(
+                    openAiFrame.value?.contentWindow?.postMessage(
                         {
                             type: 'openai:callTool:response',
                             requestId: data.requestId,
@@ -206,8 +253,8 @@ const openAiWindowHandler = async ({ data }) => {
 
         case 'openai:requestDisplayMode':
             openAiFullScreen.value = data.mode === 'fullscreen'
-            if (openAiFullScreen.value && iframeRef.value) {
-                iframeRef.value.style.height = null
+            if (openAiFullScreen.value && openAiFrame.value) {
+                openAiFrame.value.style.height = null
             }
 
             break
@@ -220,8 +267,8 @@ onMounted(() => {
 
 onUnmounted(() => {
     window.removeEventListener('message', openAiWindowHandler)
-    if (iframeRef.value) {
-        iframeRef.value.removeEventListener('load', null)
+    if (openAiFrame.value) {
+        openAiFrame.value.removeEventListener('load', null)
     }
 })
 </script>
@@ -514,7 +561,7 @@ onUnmounted(() => {
                                 <!-- Tool UI -->
                                 <ResizablePanel id="tool-ui-panel" :default-size="50">
                                     <div class="h-full overflow-auto">
-                                        <Empty v-if="(!openAiSrc)" class="p-4">
+                                        <Empty v-if="(!openAiSrc && !mcpUiSrc)" class="p-4">
                                             <EmptyMedia>
                                                 <UiIcon class="text-ring size-24"/>
                                             </EmptyMedia>
@@ -534,6 +581,7 @@ onUnmounted(() => {
 
                                         <template v-else>
                                             <div
+                                                v-if="openAiSrc"
                                                 :class="[
                                                     openAiFullScreen ? 'absolute inset-0 isolate z-20 bg-white' : 'p-4',
                                                 ]"
@@ -549,7 +597,7 @@ onUnmounted(() => {
                                                 </Button>
 
                                                 <iframe
-                                                    ref="iframeRef"
+                                                    ref="openAiFrame"
                                                     :src="openAiSrc"
                                                     :class="[
                                                         'w-full',
@@ -562,6 +610,15 @@ onUnmounted(() => {
                                                     allow="web-share"
                                                 ></iframe>
                                             </div>
+
+                                            <ui-resource-renderer
+                                                v-if="mcpUiSrc"
+                                                ref="mcpUiFrame"
+                                                :resource="mcpUiSrc"
+                                                class="[&>div]:h-full"
+                                                @onUIAction="mcpUiActionHandler"
+                                            >
+                                            </ui-resource-renderer>
                                         </template>
                                     </div>
                                 </ResizablePanel>
