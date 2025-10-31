@@ -80,7 +80,7 @@ const executePrompt = (name, params) => {
 
             <ResizablePanelGroup direction="horizontal" class="h-full">
                 <ResizablePanel :default-size="25" class="h-full overflow-hidden">
-                    <div class="flex flex-col gap-6 p-4">
+                    <div class="p-4">
                         <ItemGroup class="gap-4">
                             <Item
                                 v-for="prompt in prompts"
@@ -154,11 +154,11 @@ const executePrompt = (name, params) => {
                                     </div>
 
                                     <div class="p-4">
-                                        <p class="text-muted-foreground line-clamp-2 text-sm leading-normal font-normal text-balance [&>a:hover]:text-primary [&>a]:underline [&>a]:underline-offset-4">
+                                        <p class="text-muted-foreground line-clamp-2 text-sm leading-normal font-normal text-balance">
                                             {{ selectedPrompt.description }}
                                         </p>
 
-                                        <p v-if="promptError" class="[&>a:hover]:text-primary mt-4 line-clamp-2 text-sm leading-normal font-normal text-balance text-rose-500 [&>a]:underline [&>a]:underline-offset-4">
+                                        <p v-if="promptError" class="mt-4 line-clamp-2 text-sm leading-normal font-normal text-balance text-rose-500">
                                             {{ promptError.message ?? 'Fill out all required arguments' }}
                                         </p>
 
@@ -170,7 +170,7 @@ const executePrompt = (name, params) => {
                                             >
                                                 <FormItem class="py-4 first:pt-0 last:pb-0">
                                                     <FormLabel>
-                                                        <span class="flex items-center gap-1">
+                                                        <span class="flex items-center gap-px">
                                                             {{ argument.name }}
                                                             <span v-if="argument.required" class="text-4xl text-red-500">
                                                                 <Asterisk class="size-3" title="Required"/>

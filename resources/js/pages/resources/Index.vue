@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { computed } from 'vue'
 import { Deferred, router } from '@inertiajs/vue3'
 import JsonViewer from '@/components/JsonViewer.vue'
 import { Library as ResourcesIcon } from 'lucide-vue-next'
@@ -24,7 +25,6 @@ import {
     EmptyTitle,
 } from '@/components/ui/empty'
 import { Button } from '@/components/ui/button'
-import { computed } from 'vue'
 
 const props = defineProps({
     data: Object,
@@ -52,7 +52,7 @@ const readResource = (name: string) => {
 
             <ResizablePanelGroup direction="horizontal" class="h-full">
                 <ResizablePanel :default-size="25" class="h-full overflow-auto">
-                    <div class="flex flex-col gap-6 p-4">
+                    <div class="p-4">
                         <ItemGroup class="gap-4">
                             <Item
                                 v-for="resource in resources"

@@ -2,8 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { Deferred, router } from '@inertiajs/vue3'
 import '@mcp-ui/client/ui-resource-renderer.wc.js'
-import VueJsonPretty from 'vue-json-pretty'
-import 'vue-json-pretty/lib/styles.css'
+import JsonViewer from '@/components/JsonViewer.vue'
 import { Asterisk, ListCheck as DetailsIcon, Hammer as InputIcon, ServerCog as OutputIcon, Component as UiIcon } from 'lucide-vue-next'
 import {
     ResizableHandle,
@@ -285,7 +284,7 @@ onUnmounted(() => {
             <ResizablePanelGroup id="tools-group" direction="horizontal">
                 <!-- Tool List -->
                 <ResizablePanel id="tools-panel" :default-size="25">
-                    <div class="flex flex-col gap-6 p-4">
+                    <div class="p-4">
                         <ItemGroup class="gap-4">
                             <Item
                                 v-for="tool in tools"
@@ -315,6 +314,7 @@ onUnmounted(() => {
                 </ResizablePanel>
 
                 <ResizableHandle id="tools-group-handle" with-handle/>
+
                 <!-- Tool Details & Execution -->
                 <ResizablePanel id="tool-panel" :default-size="75">
                     <ResizablePanelGroup id="tool-group" direction="vertical">
@@ -341,22 +341,20 @@ onUnmounted(() => {
                                             </EmptyContent>
                                         </Empty>
 
-                                        <div v-else class="relative isolate divide-y">
+                                        <div v-else class="relative divide-y">
                                             <div class="bg-accent sticky top-0 left-0 z-10 flex h-14 w-full items-center px-4">
                                                 <span class="leading-none font-semibold tracking-tight">Tool Details</span>
                                             </div>
 
                                             <div class="p-4">
-                                                <VueJsonPretty
-                                                    :data="selectedTool"
-                                                    :deep="9999"
-                                                />
+                                                <JsonViewer :data="selectedTool"/>
                                             </div>
                                         </div>
                                     </div>
                                 </ResizablePanel>
 
                                 <ResizableHandle id="tool-info-handle" with-handle/>
+
                                 <!-- Tool Input -->
                                 <ResizablePanel id="tool-input-panel" :default-size="50">
                                     <form class="h-full overflow-auto" @submit.prevent="callTool(selectedTool.name, toolParams)">
@@ -394,6 +392,16 @@ onUnmounted(() => {
                                             </div>
 
                                             <div class="divide-y p-4">
+                                                <template v-if="toolError">
+                                                    <p
+                                                        v-for="error in toolError"
+                                                        :key="error.text"
+                                                        class="line-clamp-2 border-0 text-sm leading-normal font-normal text-balance text-rose-500"
+                                                    >
+                                                        {{ error.text ?? 'Fill out all required arguments' }}
+                                                    </p>
+                                                </template>
+
                                                 <div
                                                     v-for="input in inputSchema"
                                                     :key="input.name"
@@ -403,7 +411,7 @@ onUnmounted(() => {
                                                         <FormItem>
                                                             <FormLabel :for="input.name">
                                                                 <div class="flex w-full items-center justify-between gap-2">
-                                                                    <span class="flex items-center gap-1">
+                                                                    <span class="flex items-center gap-px">
                                                                         {{ input.name }}
                                                                         <span v-if="isRequired(input)" class="text-4xl text-red-500">
                                                                             <Asterisk class="size-3" title="Required"/>
@@ -552,16 +560,14 @@ onUnmounted(() => {
                                             </div>
 
                                             <div class="relative p-4">
-                                                <VueJsonPretty
-                                                    :data="toolResult"
-                                                    :deep="99999"
-                                                />
+                                                <JsonViewer :data="toolResult"/>
                                             </div>
                                         </div>
                                     </div>
                                 </ResizablePanel>
 
                                 <ResizableHandle id="tool-results-handle" with-handle/>
+
                                 <!-- Tool UI -->
                                 <ResizablePanel id="tool-ui-panel" :default-size="50">
                                     <div class="h-full overflow-auto">
