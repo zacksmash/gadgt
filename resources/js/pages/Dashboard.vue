@@ -81,13 +81,13 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="h-full">
+    <div class="h-full p-4">
         <Deferred :data="['tools', 'prompts', 'resources']">
             <template #fallback>
                 Getting data...
             </template>
 
-            <div class="mx-auto w-full max-w-5xl p-4">
+            <div class="mx-auto w-full max-w-5xl">
                 <Empty class="border border-dashed">
                     <EmptyHeader>
                         <EmptyMedia variant="icon" class="size-24">
