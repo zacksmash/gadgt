@@ -46,7 +46,6 @@ const promptArguments = ref({})
 const promptResult = ref(null)
 
 const prompts = computed(() => props.data?.result?.prompts || [])
-
 const promptError = computed(() => {
     return promptResult.value?.error
         ? promptResult.value?.error
@@ -57,13 +56,13 @@ const selectPrompt = (prompt) => {
     selectedPrompt.value = prompt
 }
 
-const executePrompt = (name, input) => {
+const executePrompt = (name, params) => {
     router.reload({
         method: 'post',
         only: ['result'],
         data: {
             name,
-            arguments: input,
+            arguments: params,
         },
         onSuccess: (page) => {
             promptResult.value = page.props.result
