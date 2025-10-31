@@ -45,6 +45,7 @@ class HandleInertiaRequests extends Middleware
                     && ! is_null($request->user()->two_factor_secret),
                 ]) : null,
             ],
+            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'status' => $request->session()->get('status'),
         ];
     }

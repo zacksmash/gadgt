@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Deferred, router } from '@inertiajs/vue3'
 import '@mcp-ui/client/ui-resource-renderer.wc.js'
 import JsonViewer from '@/components/JsonViewer.vue'
@@ -47,6 +47,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+import { useAppearance } from '@/composables/useAppearance'
+
+const { appearance } = useAppearance()
 
 const props = defineProps({
     data: Object,
@@ -62,6 +65,36 @@ const cancelToken = ref(null)
 const openAiFrame = ref(null)
 const openAiSrc = ref(null)
 const openAiFullScreen = ref(false)
+
+const openAiSetFrameTheme = (value) => {
+    if (openAiFrame.value) {
+        const iframeDocument = openAiFrame.value.contentDocument || openAiFrame.value.contentWindow.document
+
+        if (value === 'system') {
+            const mediaQueryList = window.matchMedia(
+                '(prefers-color-scheme: dark)',
+            )
+            const systemTheme = mediaQueryList.matches ? 'dark' : 'light'
+
+            iframeDocument.documentElement.classList.toggle(
+                'dark',
+                systemTheme === 'dark',
+            )
+        } else {
+            iframeDocument.documentElement.classList.toggle('dark', value === 'dark')
+        }
+    }
+}
+
+watch(
+    () => appearance.value,
+    (newAppearance) => {
+        console.log('here', newAppearance)
+        // reach into the iframe and set the html class to dark
+        openAiSetFrameTheme(newAppearance)
+    },
+    { immediate: true },
+)
 
 const mcpUiFrame = ref(null)
 const mcpUiSrc = computed(() => {
@@ -184,6 +217,10 @@ const openAiFetchTemplate = (tool) => {
 
                     iframe.addEventListener('load', resize)
                     new ResizeObserver(resize).observe(iframe.contentDocument.body)
+
+                    setTimeout(() => {
+                        openAiSetFrameTheme(appearance.value)
+                    }, 50)
                 }
             })
         },
@@ -612,7 +649,7 @@ onUnmounted(() => {
                                             <div
                                                 v-if="openAiSrc"
                                                 :class="[
-                                                    openAiFullScreen ? 'absolute inset-0 isolate z-20 bg-white' : 'p-4',
+                                                    openAiFullScreen ? 'bg-background absolute inset-0 isolate z-20' : 'p-4',
                                                 ]"
                                             >
                                                 <Button
@@ -628,11 +665,13 @@ onUnmounted(() => {
                                                 <iframe
                                                     ref="openAiFrame"
                                                     :src="openAiSrc"
+                                                    style="color-scheme: auto"
+                                                    allowtransparency="true"
                                                     :class="[
-                                                        'w-full',
+                                                        'bg-background w-full',
                                                         !openAiFullScreen ? 'mx-auto max-h-[600px] max-w-4xl border-2' : 'h-full',
                                                         resourceResult?.result.contents[0]._meta?.['openai/widgetPrefersBorder'] && !openAiFullScreen
-                                                            ? 'border-border rounded-md shadow-lg' : 'border-transparent',
+                                                            ? 'overflow-hidden rounded-md border-neutral-300 shadow-lg dark:border-neutral-700' : '',
                                                     ]"
                                                     sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
                                                     :title="`OpenAI Component: ${selectedTool.name}`"
