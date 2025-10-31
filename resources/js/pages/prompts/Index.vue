@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import { Deferred, router } from '@inertiajs/vue3'
 import { Asterisk, MessageSquareText as OutputIcon, TextCursorInput as PromptsIcon } from 'lucide-vue-next'
 import {
@@ -44,6 +44,7 @@ const props = defineProps({
 const selectedPrompt = ref(null)
 const promptArguments = ref({})
 const promptResult = ref(null)
+const cancelToken = ref(null)
 
 const prompts = computed(() => props.data?.result?.prompts || [])
 const promptError = computed(() => {
@@ -64,11 +65,24 @@ const executePrompt = (name, params) => {
             name,
             arguments: params,
         },
+        onCancelToken: ({ cancel }) => {
+            if (cancelToken.value) {
+                cancelToken.value()
+            }
+
+            cancelToken.value = cancel
+        },
         onSuccess: (page) => {
             promptResult.value = page.props.result
         },
     })
 }
+
+onUnmounted(() => {
+    if (cancelToken.value) {
+        cancelToken.value()
+    }
+})
 </script>
 
 <template>

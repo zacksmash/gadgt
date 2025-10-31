@@ -1,5 +1,5 @@
 <script lang="js" setup>
-import { ref } from 'vue'
+import { onUnmounted, ref } from 'vue'
 import { AlertCircle, Bell, CheckCircle } from 'lucide-vue-next'
 import { router } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
@@ -15,10 +15,18 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 const pong = ref(undefined)
 const pinging = ref(false)
+const cancelToken = ref(null)
 
 const ping = () => router.reload({
     method: 'post',
     only: ['pong'],
+    onCancelToken: ({ cancel }) => {
+        if (cancelToken.value) {
+            cancelToken.value()
+        }
+
+        cancelToken.value = cancel
+    },
     onBefore: () => {
         pinging.value = true
         pong.value = undefined
@@ -29,6 +37,12 @@ const ping = () => router.reload({
     onFinish: () => {
         pinging.value = false
     },
+})
+
+onUnmounted(() => {
+    if (cancelToken.value) {
+        cancelToken.value()
+    }
 })
 </script>
 

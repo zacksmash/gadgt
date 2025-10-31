@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PromptController;
 use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\ToolController;
@@ -8,16 +9,17 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 
-Route::get('/', function () {
-    return Inertia::render('Dashboard', [
-        'canUpdateProfile' => Features::canUpdateProfileInformation(),
-        'canUpdatePassword' => Features::enabled(Features::updatePasswords()),
-        'canManageTwoFactorAuthentication' => Features::canManageTwoFactorAuthentication(),
-        'confirmsTwoFactorAuthentication' => Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm'),
-    ]);
-})->middleware(['auth', 'verified'])->name('dashboard');
+// Route::get('/', function () {
+//     return Inertia::render('Dashboard', [
+//         'canUpdateProfile' => Features::canUpdateProfileInformation(),
+//         'canUpdatePassword' => Features::enabled(Features::updatePasswords()),
+//         'canManageTwoFactorAuthentication' => Features::canManageTwoFactorAuthentication(),
+//         'confirmsTwoFactorAuthentication' => Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm'),
+//     ]);
+// })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/', DashboardController::class)->name('dashboard');
     Route::match(['get', 'post'], 'tools', ToolController::class)->name('tools.index');
     Route::match(['get', 'post'], 'prompts', PromptController::class)->name('prompts.index');
     Route::match(['get', 'post'], 'resources', ResourceController::class)->name('resources.index');

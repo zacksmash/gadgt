@@ -57,6 +57,7 @@ const selectedTool = ref(null)
 const toolResult = ref(null)
 const toolParams = ref({})
 const resourceResult = ref(null)
+const cancelToken = ref(null)
 
 const openAiFrame = ref(null)
 const openAiSrc = ref(null)
@@ -121,6 +122,13 @@ const callTool = async (tool, params, fromWidget) => {
             name: tool,
             params: params,
         },
+        onCancelToken: ({ cancel }) => {
+            if (cancelToken.value) {
+                cancelToken.value()
+            }
+
+            cancelToken.value = cancel
+        },
         onStart: () => {
             openAiResetFrameHeight()
         },
@@ -153,6 +161,13 @@ const openAiFetchTemplate = (tool) => {
                 toolResponseMetadata: toolResult.value?.result?._meta || {},
                 toolName: tool.name,
             },
+        },
+        onCancelToken: ({ cancel }) => {
+            if (cancelToken.value) {
+                cancelToken.value()
+            }
+
+            cancelToken.value = cancel
         },
         onSuccess: (page) => {
             resourceResult.value = page.props.resource.result
@@ -270,6 +285,10 @@ onUnmounted(() => {
     window.removeEventListener('message', openAiActionHandler)
     if (openAiFrame.value) {
         openAiFrame.value.removeEventListener('load', null)
+    }
+
+    if (cancelToken.value) {
+        cancelToken.value()
     }
 })
 </script>

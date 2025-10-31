@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import { Deferred, router } from '@inertiajs/vue3'
 import JsonViewer from '@/components/JsonViewer.vue'
 import { Library as ResourcesIcon } from 'lucide-vue-next'
@@ -31,16 +31,31 @@ const props = defineProps({
     result: Object,
 })
 
-const resources = computed(() => props.data?.resources?.result?.resources || [])
+const resources = computed(() => props.data?.result?.resources || [])
 const resourceResult = computed(() => props.result?.result || null)
+
+const cancelToken = ref<(() => void) | null>(null)
 
 const readResource = (name: string) => {
     router.reload({
         method: 'post',
         only: ['result'],
         data: { name },
+        onCancelToken: ({ cancel }) => {
+            if (cancelToken.value) {
+                cancelToken.value()
+            }
+
+            cancelToken.value = cancel
+        },
     })
 }
+
+onUnmounted(() => {
+    if (cancelToken.value) {
+        cancelToken.value()
+    }
+})
 </script>
 
 <template>

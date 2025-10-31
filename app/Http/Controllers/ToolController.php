@@ -14,17 +14,13 @@ class ToolController extends Controller
     public function __invoke(Request $request)
     {
         return inertia('tools/Index', [
-            'data' => inertia()->defer(function () {
-                return McpRequest::listTools();
-            }),
-
-            'result' => inertia()->optional(function () use ($request) {
-                return McpRequest::callTool(
+            'data' => inertia()->defer(fn () => McpRequest::listTools()),
+            'result' => inertia()->optional(
+                fn () => McpRequest::callTool(
                     $request->input('name'),
                     $request->input('params'),
-                );
-            }),
-
+                )
+            ),
             'resource' => inertia()->optional(function () use ($request) {
                 $response = McpRequest::readResource($request->input('name'));
 

@@ -13,10 +13,7 @@ class PromptController extends Controller
     public function __invoke(Request $request)
     {
         return inertia('prompts/Index', [
-            'data' => inertia()->defer(
-                fn () => McpRequest::listPrompts()
-            ),
-
+            'data' => inertia()->defer(fn () => McpRequest::listPrompts()),
             'result' => inertia()->optional(
                 fn () => McpRequest::getPrompt(
                     $request->input('name'),
