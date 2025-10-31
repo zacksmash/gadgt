@@ -56,8 +56,8 @@ const props = defineProps({
 
 const selectedTool = ref(null)
 const toolResult = ref(null)
-const resourceResult = ref(null)
 const toolParams = ref({})
+const resourceResult = ref(null)
 
 const openAiFrame = ref(null)
 const openAiSrc = ref(null)
@@ -83,38 +83,14 @@ const mcpUiSrc = computed(() => {
 
     return false
 })
-const mcpUiActionHandler = ({ detail: result }) => {
-    switch (result.type) {
-        case 'tool':
-            console.log('Tool call:', result.payload.toolName, result.payload.params)
-            // Handle tool execution
-            break
-        case 'prompt':
-            console.log('Prompt:', result.payload.prompt)
-            // Handle prompt display
-            break
-        case 'link':
-            console.log('Link:', result.payload.url)
-            // Handle link navigation
-            break
-        case 'intent':
-            console.log('Intent:', result.payload.intent, result.payload.params)
-            // Handle intent processing
-            break
-        case 'notify':
-            console.log('Notification:', result.payload.message)
-            // Handle notification display
-            break
-    }
-    return { status: 'handled' }
-}
+
+const tools = computed(() => props.data?.result?.tools || [])
 
 const toolError = computed(() => {
     return toolResult.value?.result?.isError
         ? toolResult.value?.result?.content
         : null
 })
-const tools = computed(() => props.data?.result?.tools || [])
 
 const inputSchema = computed(() => {
     return selectedTool.value?.inputSchema?.properties
@@ -136,7 +112,7 @@ const selectTool = (tool) => {
     toolParams.value = {}
 }
 
-const runTool = async (tool, params, fromWidget) => {
+const callTool = async (tool, params, fromWidget) => {
     toolResult.value = null
 
     router.reload({
@@ -147,7 +123,7 @@ const runTool = async (tool, params, fromWidget) => {
             params: params,
         },
         onStart: () => {
-            resetOpenAiWidgetHeight()
+            openAiResetFrameHeight()
         },
         onSuccess: (page) => {
             toolResult.value = page.props.result
@@ -203,22 +179,22 @@ const openAiFetchTemplate = (tool) => {
 const openAiLeaveFullScreen = () => {
     openAiFullScreen.value = false
 
-    resetOpenAiWidgetHeight()
+    openAiResetFrameHeight()
 }
 
-const resetOpenAiWidgetHeight = () => {
+const openAiResetFrameHeight = () => {
     if (openAiFrame.value) {
         const event = new Event('load')
         openAiFrame.value.dispatchEvent(event)
     }
 }
 
-const openAiWindowHandler = async ({ data }) => {
+const openAiActionHandler = async ({ data }) => {
     switch (data.type) {
         case 'openai:callTool':
-            if (runTool) {
+            if (callTool) {
                 try {
-                    await runTool(
+                    await callTool(
                         data.toolName,
                         data.params || {},
                         true,
@@ -235,7 +211,7 @@ const openAiWindowHandler = async ({ data }) => {
                         )
 
                         setTimeout(() => {
-                            resetOpenAiWidgetHeight()
+                            openAiResetFrameHeight()
                         }, 10)
                     }, 500)
                 } catch (err) {
@@ -261,12 +237,38 @@ const openAiWindowHandler = async ({ data }) => {
     }
 }
 
+const mcpUiActionHandler = ({ detail: result }) => {
+    switch (result.type) {
+        case 'tool':
+            console.log('Tool call:', result.payload.toolName, result.payload.params)
+            // Handle tool execution
+            break
+        case 'prompt':
+            console.log('Prompt:', result.payload.prompt)
+            // Handle prompt display
+            break
+        case 'link':
+            console.log('Link:', result.payload.url)
+            // Handle link navigation
+            break
+        case 'intent':
+            console.log('Intent:', result.payload.intent, result.payload.params)
+            // Handle intent processing
+            break
+        case 'notify':
+            console.log('Notification:', result.payload.message)
+            // Handle notification display
+            break
+    }
+    return { status: 'handled' }
+}
+
 onMounted(() => {
-    window.addEventListener('message', openAiWindowHandler)
+    window.addEventListener('message', openAiActionHandler)
 })
 
 onUnmounted(() => {
-    window.removeEventListener('message', openAiWindowHandler)
+    window.removeEventListener('message', openAiActionHandler)
     if (openAiFrame.value) {
         openAiFrame.value.removeEventListener('load', null)
     }
@@ -357,7 +359,7 @@ onUnmounted(() => {
                                 <ResizableHandle id="tool-info-handle" with-handle/>
                                 <!-- Tool Input -->
                                 <ResizablePanel id="tool-input-panel" :default-size="50">
-                                    <form class="h-full overflow-auto" @submit.prevent="runTool(selectedTool.name, toolParams)">
+                                    <form class="h-full overflow-auto" @submit.prevent="callTool(selectedTool.name, toolParams)">
                                         <Empty v-if="!selectedTool" class="p-4">
                                             <EmptyMedia>
                                                 <DetailsIcon class="text-ring size-24"/>
@@ -378,7 +380,9 @@ onUnmounted(() => {
 
                                         <div v-else class="relative isolate divide-y">
                                             <div class="bg-accent sticky top-0 left-0 z-10 flex h-14 w-full items-center justify-between gap-4 px-4">
-                                                <span class="leading-none font-semibold tracking-tight">Tool Input</span>
+                                                <span class="leading-none font-semibold tracking-tight">
+                                                    Tool Input
+                                                </span>
 
                                                 <Button
                                                     size="sm"
@@ -389,11 +393,11 @@ onUnmounted(() => {
                                                 </Button>
                                             </div>
 
-                                            <div class="p-4">
+                                            <div class="divide-y p-4">
                                                 <div
                                                     v-for="input in inputSchema"
                                                     :key="input.name"
-                                                    class="py-4"
+                                                    class="py-4 first:pt-0 last:pb-0"
                                                 >
                                                     <FormField :name="input.name">
                                                         <FormItem>
@@ -615,7 +619,7 @@ onUnmounted(() => {
                                                 v-if="mcpUiSrc"
                                                 ref="mcpUiFrame"
                                                 :resource="mcpUiSrc"
-                                                class="[&>div]:h-full"
+                                                class="[&_div]:h-full"
                                                 @onUIAction="mcpUiActionHandler"
                                             >
                                             </ui-resource-renderer>

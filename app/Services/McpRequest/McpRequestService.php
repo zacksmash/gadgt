@@ -32,10 +32,28 @@ class McpRequestService
         ])->sse();
     }
 
+    public function listResources(): array
+    {
+        return $this->http('resources/list')->sse();
+    }
+
     public function readResource(string $name): array
     {
         return $this->http('resources/read', [
             'uri' => $name,
+        ])->sse();
+    }
+
+    public function listPrompts(): array
+    {
+        return $this->http('prompts/list')->sse();
+    }
+
+    public function getPrompt(string $name, array $arguments = []): array
+    {
+        return $this->http('prompts/get', [
+            'name' => $name,
+            'arguments' => $arguments,
         ])->sse();
     }
 

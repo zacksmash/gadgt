@@ -35,7 +35,7 @@ const ping = () => router.reload({
 <template>
     <div class="p-4">
         <div class="mx-auto flex w-full max-w-5xl items-center gap-2">
-            <Empty class="from-muted-foreground/5 to-background h-full bg-gradient-to-b from-30%">
+            <Empty class="from-muted/50 to-background ring-ring/30 h-full bg-gradient-to-b from-30% ring-1">
                 <EmptyHeader>
                     <EmptyMedia>
                         <Bell class="size-25"/>

@@ -11,7 +11,7 @@ class ToolController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request)
+    public function __invoke(Request $request)
     {
         return inertia('tools/Index', [
             'data' => inertia()->defer(function () {

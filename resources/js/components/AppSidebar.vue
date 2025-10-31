@@ -27,12 +27,12 @@ const items = [
     },
     {
         title: 'Prompts',
-        href: '#',
+        href: '/prompts',
         icon: PromptsIcon,
     },
     {
         title: 'Resources',
-        href: '#',
+        href: '/resources',
         icon: ResourcesIcon,
     },
     {

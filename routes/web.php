@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\PromptController;
+use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\ToolController;
 use App\Services\McpRequest\McpRequest;
 use Illuminate\Support\Facades\Route;
@@ -16,7 +18,9 @@ Route::get('/', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
-    Route::match(['get', 'post'], 'tools', [ToolController::class, 'index'])->name('tools.index');
+    Route::match(['get', 'post'], 'tools', ToolController::class)->name('tools.index');
+    Route::match(['get', 'post'], 'prompts', PromptController::class)->name('prompts.index');
+    Route::match(['get', 'post'], 'resources', ResourceController::class)->name('resources.index');
 
     Route::match(['get', 'post'], 'ping', function () {
         return Inertia::render('ping/Index', [
